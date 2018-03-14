@@ -19,7 +19,7 @@ RESET = get_color()
 
 
 def add_color(s, fg=None, bg=None, bold=False):
-    return get_color(fg=fg, bg=bg, bold=bold) + s + RESET
+    return get_color(fg=fg, bg=bg, bold=bold) + str(s) + RESET
 
 
 def restore_color(colors, end):

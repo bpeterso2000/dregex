@@ -7,7 +7,7 @@ Copyright (c) 1997-2001 by Secret Labs AB
 _sre.py 2.4c Copyright 2005 by Nik Haldimann
 
 Source code retrieved from project brython (http://brython.info)
-Brian Peterson, 2018, added additional debugger features.
+Brian Peterson, 2018, added debugger.
 """
 import array
 import operator
@@ -79,9 +79,7 @@ class SRE_Pattern:
     def search(self, string, pos=0, endpos=sys.maxsize, method='search'):
         """Search a string for the presence of a pattern.
 
-        :rtype:
-            * MatchObject instance or
-            * None if the string doesn't match.
+        Returns a MatchObject instance or None if string doesn't match.
         """
         state = _State(string, pos, endpos, self.flags)
         match = getattr(state, method)(self._code)
@@ -90,18 +88,16 @@ class SRE_Pattern:
         return result
 
     def match(self, string, pos=0, endpos=sys.maxsize):
-        """Match a regular expression pattern to the beginning of a string.
+        """Match a regular expression pattern to beginning of a string.
 
-        :rtype:
-            * MatchObject instance or
-            * None if the string doesn't match.
+        Returns a MatchObject instance or None if string doesn't match.
         """
         return self.search(string, pos, endpos, method='match')
 
     def findall(self, string, pos=0, endpos=sys.maxsize):
         """Find all occurrences of a pattern in a string.
 
-        :rtype: list
+        Returns a list.
         """
         matchlist = []
         state = _State(string, pos, endpos, self.flags)
@@ -168,10 +164,11 @@ class SRE_Pattern:
     def sub(self, repl, string, count=0):
         """Substitute occurrences of a pattern found in a string.
 
-        Return the string obtained by replacing the leftmost non-overlapping
-        occurrences of pattern in string by the replacement repl.
+        Return the string obtained by replacing the leftmost
+        non-overlapping occurrences of pattern in string by the
+        replacement repl.
 
-        :rtype: str
+        Returns a string.
         """
         return self._subx(repl, string, count, False)
 
@@ -780,7 +777,6 @@ class _OpcodeDispatcher(_Dispatcher):
             not self.ch_dispatcher.dispatch(ctx.peek_code(1), ctx)
         ):
             ctx.has_matched = False
-            # print('_sre.py:line703, update context.has_matched variable')
             return True
         ctx.skip_code(2)
         ctx.skip_char(1)
@@ -792,7 +788,6 @@ class _OpcodeDispatcher(_Dispatcher):
         self._log(ctx, "ANY")
         if ctx.at_end() or ctx.at_linebreak():
             ctx.has_matched = False
-            # print('_sre.py:line714, update context.has_matched variable')
             return True
         ctx.skip_code(1)
         ctx.skip_char(1)
@@ -804,7 +799,6 @@ class _OpcodeDispatcher(_Dispatcher):
         self._log(ctx, "ANY_ALL")
         if ctx.at_end():
             ctx.has_matched = False
-            # print('_sre.py:line725, update context.has_matched variable')
             return True
         ctx.skip_code(1)
         ctx.skip_char(1)
@@ -814,20 +808,15 @@ class _OpcodeDispatcher(_Dispatcher):
         self._log(ctx, "OP_IN ")
         if ctx.at_end():
             ctx.has_matched = False
-            # print('_sre.py:line734, update context.has_matched variable')
             return
         skip = ctx.peek_code(1)
         # set op pointer to the set code
         ctx.skip_code(2)
-        # print(ctx.peek_char(), ord(ctx.peek_char()),
-        #      decorate(ord(ctx.peek_char())))
         if not self.check_charset(ctx, decorate(ord(ctx.peek_char()))):
-            # print('_sre.py:line738, update context.has_matched variable')
             ctx.has_matched = False
             return
         ctx.skip_code(skip - 1)
         ctx.skip_char(1)
-        # print('end:general_op_in')
 
     def op_in(self, ctx):
         # match set member (or non_member)
@@ -854,16 +843,14 @@ class _OpcodeDispatcher(_Dispatcher):
     op_info = op_jump
 
     def op_mark(self, ctx):
-        # set mark
-        # <MARK> <gid>
+        """Set mark. <MARK> <gid>"""
         self._log(ctx, "OP_MARK", ctx.peek_code(1))
         ctx.state.set_mark(ctx.peek_code(1), ctx.string_position)
         ctx.skip_code(2)
         return True
 
     def op_branch(self, ctx):
-        # alternation
-        # <BRANCH> <0=skip> code <JUMP> ... <NULL>
+        """Alternation: <BRANCH> <0=skip> code <JUMP> ... <NULL>"""
         self._log(ctx, "BRANCH")
         ctx.state.marks_push()
         ctx.skip_code(1)
@@ -877,7 +864,6 @@ class _OpcodeDispatcher(_Dispatcher):
             ):
                 ctx.state.string_position = ctx.string_position
                 child_context = ctx.push_new_context(1)
-                # print("_sre.py:803:op_branch")
                 yield False
                 if child_context.has_matched:
                     ctx.has_matched = True
@@ -887,7 +873,6 @@ class _OpcodeDispatcher(_Dispatcher):
             current_branch_length = ctx.peek_code(0)
         ctx.state.marks_pop_discard()
         ctx.has_matched = False
-        # print('_sre.py:line805, update context.has_matched variable')
         yield True
 
     def op_repeat_one(self, ctx):
@@ -930,7 +915,6 @@ class _OpcodeDispatcher(_Dispatcher):
                     break
                 ctx.state.string_position = ctx.string_position
                 child_context = ctx.push_new_context(ctx.peek_code(1) + 1)
-                # print("_sre.py:856:push_new_context")
                 yield False
                 if child_context.has_matched:
                     ctx.has_matched = True
@@ -1217,6 +1201,8 @@ class _OpcodeDispatcher(_Dispatcher):
 
         Assumes the code pointer is at the first member of the set.
         """
+        _numops = ctx.code_position + ctx.pattern_codes[ctx.code_position - 1]
+        _log(ctx.pattern_codes[ctx.code_position:_numops - 2])
         self.set_dispatcher.reset(char)
         save_position = ctx.code_position
         result = None

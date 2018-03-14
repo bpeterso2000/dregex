@@ -1,3 +1,4 @@
+import math
 from pprint import pformat
 
 import colorama
@@ -11,7 +12,7 @@ colorama.init()
 # max num search string chars to display while debugging
 DBUG_WINDOW_SIZE = 76
 GROUP_ATTRS = ['group', 'start', 'end', 'span']
-HORIZ_LINE = add_color('-' * 76, fg='yellow')
+HORIZ_LINE = add_color('-' * 76, fg='yellow') + '\n'
 
 
 class OpTracker:
@@ -24,10 +25,18 @@ class OpTracker:
 
 
 def show_match(match):
-    result = HORIZ_LINE + '\n'
     if match:
-        hi = [Color(match.start(), match.end(), get_color('RED', bold=True))]
-        result += highlight.apply_styles(match.string, hi) + '\n'
+        result = 'Found Match.\n'
+        if not match.groups():
+            hi = HORIZ_LINE + [Color(
+                match.start(),
+                match.end(),
+                get_color('RED', bold=True)
+            )]
+            result += highlight.apply_styles(match.string, hi) + '\n'
+    else:
+        result = add_color('Match Not Found!', fg='red', bold=True)
+        return result
     if match.groupdict():
         # regex uses group names
         result += '{hline}\nmatch.groupdict(): {value}'.format(
@@ -36,25 +45,29 @@ def show_match(match):
         )
     if match.groups():
         # regex uses groups
-        for group_num, group in enumerate(match.groups()):
-            result += HORIZ_LINE + '\n' + ''.join([
+        result += HORIZ_LINE + 'match.groups(): {}\nmatch.regs: {}'.format(
+            add_color(match.groups(), fg='green', bold=True),
+            add_color(match.regs, fg='green', bold=True)
+        )
+        for group_num, group in enumerate(match.groups(), start=1):
+            result += ''.join([
                 'match.{match_attr}({match_num}): {value}\n'.format(
                     match_attr=add_color(i, fg='green', bold=True),
                     match_num=add_color(group_num, fg='yellow', bold=True),
                     value=add_color(
-                        getattr(group, i)(group_num), fg='white', bold='True'
+                        getattr(match, i)(group_num), fg='white', bold='True'
                     )
                 ) for i in GROUP_ATTRS
             ])
-            result += highlight.apply_styles(
-                match.string, [group.span(group_num)]
-            )
-        result += 'match.groups(): {}\nmatch.regs(): {}'.format(
-            add_color(match.groups(), fg='green', bold=True),
-            add_color(match.regs(), fg='green', bold=True)
-        )
+            result += HORIZ_LINE + highlight.apply_styles(
+                match.string, [Color(
+                    match.start(group_num),
+                    match.end(group_num),
+                    get_color('magenta', bold=True)
+                )]
+            ) + '\n'
     else:
-        result += HORIZ_LINE + '\n' + ''.join([
+        result += HORIZ_LINE + ''.join([
             'match.{match_attr}(): {value}\n'.format(
                 match_attr=add_color(i, fg='green', bold=True),
                 value=add_color(
@@ -87,7 +100,9 @@ def disp_str_pos(string, str_pos, marks=None, window=DBUG_WINDOW_SIZE):
         marker_pos = position + offset
         disp_str = disp_str[:marker_pos] + markers + disp_str[marker_pos:]
         offset += len(markers)
-    return disp_str[max(position - window_offset, 0):window]
+    padding = int(math.log(len(string), 10)) + 2
+    output = add_color(str(str_pos).rjust(padding) + ': ', fg='yellow')
+    return output + disp_str[max(position - window_offset, 0):window]
 
 
 def op_logger(dispatcher, ctx, opname, *args):
