@@ -23,7 +23,6 @@ def dis(code):
     offset_width = len(str(len(code) - 1))
 
     def dis_(start, end):
-        import pdb; pdb.set_trace()
         def print_(*args, to=None):
             if to is not None:
                 labels.add(to)

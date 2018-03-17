@@ -480,7 +480,7 @@ class _State:
             if self.match(pattern_codes):
                 return True
             string_position += 1
-            _log(disp_str_pos(self.string, string_position))
+            # _log(disp_str_pos(self.string, string_position))
         return False
 
     def fast_search(self, pattern_codes):

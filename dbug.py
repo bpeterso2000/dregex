@@ -26,14 +26,18 @@ class OpTracker:
 
 def show_match(match):
     if match:
-        result = 'Found Match.\n'
+        result = HORIZ_LINE + add_color('Found Match.\n', bold=True)
         if not match.groups():
-            hi = HORIZ_LINE + [Color(
+            hi = [Color(
                 match.start(),
                 match.end(),
                 get_color('RED', bold=True)
             )]
-            result += highlight.apply_styles(match.string, hi) + '\n'
+            result += (
+                HORIZ_LINE +
+                highlight.apply_styles(match.string, hi) +
+                '\n'
+            )
     else:
         result = add_color('Match Not Found!', fg='red', bold=True)
         return result
@@ -78,11 +82,12 @@ def show_match(match):
     return result
 
 
-def disp_str_pos(string, str_pos, marks=None, window=DBUG_WINDOW_SIZE):
+def disp_str_pos(
+    string, str_pos, marks=None, num_codes=0, window=DBUG_WINDOW_SIZE
+):
     disp_str = string
     if marks is None:
         marks = []
-    window_offset = int(window/2)
     positions = {}
     for position in marks:
         positions[position] = (
@@ -92,7 +97,7 @@ def disp_str_pos(string, str_pos, marks=None, window=DBUG_WINDOW_SIZE):
         )
     positions[str_pos] = (
         positions.get(str_pos, '') +
-        Fore.GREEN + Style.BRIGHT + '>' +
+        Fore.GREEN + Style.BRIGHT + '<' +
         Fore.RESET + Style.NORMAL
     )
     offset = 0
@@ -100,14 +105,64 @@ def disp_str_pos(string, str_pos, marks=None, window=DBUG_WINDOW_SIZE):
         marker_pos = position + offset
         disp_str = disp_str[:marker_pos] + markers + disp_str[marker_pos:]
         offset += len(markers)
-    padding = int(math.log(len(string), 10)) + 2
+    padding = int(math.log(max(len(string), num_codes), 10)) + 2
     output = add_color(str(str_pos).rjust(padding) + ': ', fg='yellow')
-    return output + disp_str[max(position - window_offset, 0):window]
+    # return output + disp_str[max(position - int(window/2), 0):window]
+    # need to fix so it doesn't cut off at partial escape code
+    return output + disp_str
+
+def disp_pattern_pos(
+    opname, args, pattern, code_pos, str_len=0, window=DBUG_WINDOW_SIZE
+):
+    def segment(start=None, end=None, bold=False):
+        return add_color(
+            str(pattern[start:end]).lstrip('[').rstrip(']'),
+            fg='cyan',
+            bold=bold
+        )
+    literals = [n + 1 for n, i in enumerate(pattern) if 'LITERAL' in str(i)]
+    pattern = [chr(i) if n in literals else i for n, i in enumerate(pattern)]
+    end_pos = code_pos + len(args[0]) + 1
+    highlighted = segment(code_pos, end_pos, bold=True)
+    if code_pos:
+        if end_pos < len(pattern):
+            segments = (
+                segment(end=code_pos),
+                highlighted,
+                segment(end_pos)
+            )
+        else:
+            segments = (segment(end=code_pos), highlighted)
+    else:
+        segments = (highlighted, segment(end_pos))
+    segments = ', '.join(segments)
+    padding = int(math.log(max(len(pattern), str_len), 10)) + 2
+    output = '{}: [{}]'.format(
+        add_color(str(code_pos).rjust(padding), fg='cyan'),
+        segments
+    )
+    #return output[max(code_pos - int(window/2), 0):window]
+    # need to fix so it doesn't cut off at partial escape code
+    return output
 
 
 def op_logger(dispatcher, ctx, opname, *args):
+        num_args = len(args[0])
+        yield add_color(HORIZ_LINE, fg='yellow')
         last_str_pos = dispatcher._dbug.last_str_pos
         last_marks = dispatcher._dbug.last_marks
+        # if 'LITERAL' in opname:
+        #    char = add_color(chr(args[0][0]), fg='white', bold=True)
+        #    arg_string = "'" + char + "'"
+        # elif num_args == 0:
+        #    arg_string = ''
+        # elif num_args == 1:
+        #    arg_string = str(args[0][0])
+        # else:
+        #    arg_string = ("%s " * len(args)) % args
+        # yield '{}. {} {}'.format(
+        #    dispatcher._dbug.op_count, opname, arg_string
+        # )
         if (
             ctx.string_position != last_str_pos or
             ctx.state.marks != last_marks
@@ -115,18 +170,18 @@ def op_logger(dispatcher, ctx, opname, *args):
             yield disp_str_pos(
                 ctx.state.string,
                 ctx.string_position,
-                ctx.state.marks
+                ctx.state.marks,
+                num_codes=len(ctx.pattern_codes)
             )
-            yield '-' * 76
-        arg_string = ("%s " * len(args)) % args
-        disp_op = '{}. {} {}'.format(
-            dispatcher._dbug.op_count, opname, arg_string
+        # yield add_color(
+        #    '\n {:>2}: {}'.format(
+        #        ctx.code_position, ctx.pattern_codes
+        #    ), fg='cyan'
+        # )
+        yield disp_pattern_pos(
+            opname,
+            args,
+            ctx.pattern_codes,
+            ctx.code_position,
+            str_len=len(ctx.state.string)
         )
-        yield disp_op
-
-        # _log(context.pattern_codes)
-        # print(vars(context))
-        # print(vars(context.state))
-        # print()
-        # _log("|%s|%s|%s %s" % (context.mark_stack,
-        #      context.string_position, opname, arg_string))
