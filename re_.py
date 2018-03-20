@@ -9,7 +9,7 @@ import _sre_
 class RegEx:
 
     def __init__(self, pattern, flags=0):
-        self.flags = flags | SRE_FLAG_DEBUG
+        self.flags = flags
         self.pattern = pattern
         self.debug = True
         self.compile()
@@ -17,7 +17,7 @@ class RegEx:
     @property
     def dis(self):
         """Show formatted opcodes."""
-        return sre_compile.dis(self.code)
+        sre_compile.dis(self.code)
 
     @property
     def dump(self):
@@ -42,9 +42,9 @@ class RegEx:
             self.subpattern.pattern.groups - 1,
             self.groupindex, tuple(self.indexgroup)
         )
+        self.dump
         print('-' * 76)
-        if hasattr(self, 'dis'):
-            print(self.dis)
+        self.dis
 
     def search(self, string):
         return self.regex.search(string)

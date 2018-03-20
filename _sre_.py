@@ -480,7 +480,6 @@ class _State:
             if self.match(pattern_codes):
                 return True
             string_position += 1
-            # _log(disp_str_pos(self.string, string_position))
         return False
 
     def fast_search(self, pattern_codes):
@@ -497,13 +496,14 @@ class _State:
         prefix = pattern_codes[7:7 + prefix_len]
         _log((
             'SRE_INFO_PREFIX: Pattern starts with a known prefix.\n'
-            'Skipping ahead {} character(s) ...'
+            'Skipping ahead ...'
         ).format(prefix_skip))
         overlap = pattern_codes[7 + prefix_len - 1:pattern_codes[1] + 1]
         pattern_codes = pattern_codes[pattern_codes[1] + 1:]
         i = 0
         string_position = self.string_position
         while string_position < self.end:
+            _log(disp_str_pos(self.string, string_position))
             while True:
                 if ord(self.string[string_position]) != prefix[i]:
                     if i == 0:
@@ -514,6 +514,7 @@ class _State:
                     i += 1
                     if i == prefix_len:
                         # found a potential match
+                        _log(disp_str_pos(self.string, string_position))
                         self.start = string_position + 1 - prefix_len
                         self.string_position = (
                             string_position + 1 - prefix_len + prefix_skip
@@ -527,7 +528,6 @@ class _State:
                         i = overlap[i]
                     break
             string_position += 1
-            _log(disp_str_pos(self.string, string_position))
         return False
 
     def set_mark(self, mark_nr, position):

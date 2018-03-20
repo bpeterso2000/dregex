@@ -39,7 +39,10 @@ def show_match(match):
                 '\n'
             )
     else:
-        result = add_color('Match Not Found!', fg='red', bold=True)
+        result = (
+            HORIZ_LINE +
+            add_color('Match Not Found!', fg='red', bold=True)
+        )
         return result
     if match.groupdict():
         # regex uses group names
@@ -49,7 +52,7 @@ def show_match(match):
         )
     if match.groups():
         # regex uses groups
-        result += HORIZ_LINE + 'match.groups(): {}\nmatch.regs: {}'.format(
+        result += HORIZ_LINE + 'match.groups(): {}\nmatch.regs: {}\n'.format(
             add_color(match.groups(), fg='green', bold=True),
             add_color(match.regs, fg='green', bold=True)
         )
@@ -92,12 +95,14 @@ def disp_str_pos(
     for position in marks:
         positions[position] = (
             positions.get(position, '') +
-            Fore.RED + Style.BRIGHT + '|' +
+            Fore.RED + Style.BRIGHT +
+            '|' +
             Fore.RESET + Style.NORMAL
         )
     positions[str_pos] = (
         positions.get(str_pos, '') +
-        Fore.GREEN + Style.BRIGHT + '<' +
+        Fore.GREEN + Style.BRIGHT +
+        '>' +
         Fore.RESET + Style.NORMAL
     )
     offset = 0
@@ -115,15 +120,23 @@ def disp_pattern_pos(
     opname, args, pattern, code_pos, str_len=0, window=DBUG_WINDOW_SIZE
 ):
     def segment(start=None, end=None, bold=False):
-        return add_color(
-            str(pattern[start:end]).lstrip('[').rstrip(']'),
-            fg='cyan',
-            bold=bold
+        sep = add_color(', ', fg='cyan')
+        pattern_str = (
+            add_color(repr(i), fg='cyan', bold=bold)
+            for i in pattern[start:end]
         )
+        if bold:
+            pointer = (
+                get_color(fg='yellow') + '>' + get_color(fg='cyan', bold=True)
+            )
+            pattern_str = (pointer + i for i in pattern_str)
+        return sep.join(pattern_str)
+
     literals = [n + 1 for n, i in enumerate(pattern) if 'LITERAL' in str(i)]
     pattern = [chr(i) if n in literals else i for n, i in enumerate(pattern)]
     end_pos = code_pos + len(args[0]) + 1
-    highlighted = segment(code_pos, end_pos, bold=True)
+    pointer = add_color('>', fg='yellow')
+    highlighted = pointer + segment(code_pos, end_pos, bold=True)
     if code_pos:
         if end_pos < len(pattern):
             segments = (
